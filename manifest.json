@@ -1,0 +1,28 @@
+{
+  "name": "תקציב משפחתי - ניהול פיננסי חודשי",
+  "short_name": "תקציב משפחתי",
+  "description": "מערכת ניהול תקציב משפחתי חודשי עם מעקב הכנסות, הוצאות, מגמות ואינפוגרפיקה",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1e1b4b",
+  "theme_color": "#4150f5",
+  "dir": "rtl",
+  "lang": "he",
+  "categories": ["finance", "utilities"],
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

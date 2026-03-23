@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self';">
+<title>תקציב משפחתי - ניהול פיננסי חודשי</title>
+<!-- PWA Meta Tags -->
+<meta name="theme-color" content="#4150f5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="תקציב משפחתי">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="תקציב משפחתי">
+<meta name="msapplication-TileColor" content="#1e1b4b">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="apple-touch-icon" href="icons/icon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- Auth Screen -->
+<div id="authScreen" class="auth-screen hidden">
+  <div class="auth-card">
+    <div class="auth-icon">🔐</div>
+    <h1 id="authTitle">כניסה לחשבון</h1>
+
+    <!-- Login Form -->
+    <form id="loginForm" class="auth-form">
+      <div class="form-group">
+        <label class="form-label">אימייל</label>
+        <input type="email" id="loginEmail" class="form-input" placeholder="your@email.com" required autocomplete="email" dir="ltr">
+      </div>
+      <div class="form-group">
+        <label class="form-label">סיסמה</label>
+        <input type="password" id="loginPassword" class="form-input" placeholder="סיסמה" required minlength="6" maxlength="64" autocomplete="current-password">
+      </div>
+      <div class="form-error" id="loginError"></div>
+      <div class="lockout-msg hidden" id="lockoutMsg"></div>
+      <button type="submit" class="btn-primary" id="loginBtn">כניסה</button>
+      <div class="auth-links">
+        <button type="button" class="auth-link" id="showRegister">אין לך חשבון? הרשמה</button>
+        <button type="button" class="auth-link" id="showForgot">שכחתי סיסמה</button>
+      </div>
+    </form>
+
+    <!-- Register Form -->
+    <form id="registerForm" class="auth-form hidden">
+      <div class="form-group">
+        <label class="form-label">אימייל</label>
+        <input type="email" id="regEmail" class="form-input" placeholder="your@email.com" required autocomplete="email" dir="ltr">
+      </div>
+      <div class="form-group">
+        <label class="form-label">סיסמה (לפחות 6 תווים)</label>
+        <input type="password" id="regPassword" class="form-input" placeholder="סיסמה" required minlength="6" maxlength="64" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label class="form-label">אישור סיסמה</label>
+        <input type="password" id="regPasswordConfirm" class="form-input" placeholder="סיסמה שוב" required minlength="6" maxlength="64" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label class="form-label">שאלת אבטחה</label>
+        <select id="regSecurityQuestion" class="form-input" required>
+          <option value="">בחר שאלה...</option>
+          <option value="pet">מה שם חיית המחמד הראשונה שלך?</option>
+          <option value="city">באיזו עיר נולדת?</option>
+          <option value="school">מה שם בית הספר היסודי שלך?</option>
+          <option value="food">מה המאכל האהוב עליך?</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">תשובה לשאלת האבטחה</label>
+        <input type="text" id="regSecurityAnswer" class="form-input" placeholder="תשובה" required maxlength="100">
+      </div>
+      <div class="form-error" id="regError"></div>
+      <button type="submit" class="btn-primary">הרשמה</button>
+      <div class="auth-links">
+        <button type="button" class="auth-link" id="showLogin">יש לך חשבון? כניסה</button>
+      </div>
+    </form>
+
+    <!-- Verify Code Form -->
+    <form id="verifyForm" class="auth-form hidden">
+      <p class="auth-subtitle">קוד אימות נשלח לאימייל שלך (סימולציה)</p>
+      <div class="verify-code-display" id="verifyCodeDisplay"></div>
+      <div class="form-group">
+        <label class="form-label">הזן קוד אימות (6 ספרות)</label>
+        <input type="text" id="verifyCode" class="form-input verify-input" placeholder="000000" required maxlength="6" pattern="[0-9]{6}" inputmode="numeric" dir="ltr">
+      </div>
+      <div class="form-error" id="verifyError"></div>
+      <button type="submit" class="btn-primary">אמת</button>
+    </form>
+
+    <!-- Forgot Password Form -->
+    <form id="forgotForm" class="auth-form hidden">
+      <div class="form-group">
+        <label class="form-label">אימייל</label>
+        <input type="email" id="forgotEmail" class="form-input" placeholder="your@email.com" required dir="ltr">
+      </div>
+      <div class="form-group hidden" id="securityQuestionGroup">
+        <label class="form-label" id="securityQuestionLabel">שאלת אבטחה</label>
+        <input type="text" id="forgotSecurityAnswer" class="form-input" placeholder="תשובה" required maxlength="100">
+      </div>
+      <div class="form-group hidden" id="newPasswordGroup">
+        <label class="form-label">סיסמה חדשה</label>
+        <input type="password" id="forgotNewPassword" class="form-input" placeholder="סיסמה חדשה" minlength="6" maxlength="64">
+      </div>
+      <div class="form-error" id="forgotError"></div>
+      <button type="submit" class="btn-primary" id="forgotBtn">המשך</button>
+      <div class="auth-links">
+        <button type="button" class="auth-link" id="backToLogin">חזרה לכניסה</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Welcome Screen -->
+<div id="welcomeScreen" class="welcome-screen hidden">
+  <div class="welcome-card">
+    <div class="welcome-icon">💰</div>
+    <h1>ברוכים הבאים!</h1>
+    <p>מערכת ניהול תקציב משפחתי חודשי</p>
+    <div class="form-group">
+      <label class="form-label">שם המשפחה</label>
+      <input type="text" id="familyNameInput" class="form-input" placeholder="לדוגמה: כהן" maxlength="50">
+    </div>
+    <div class="form-group">
+      <label class="form-label">יעד חיסכון חודשי (₪)</label>
+      <input type="number" id="savingsGoalInput" class="form-input" placeholder="3000" min="0" max="10000000" step="1">
+    </div>
+    <button id="startBtn" class="btn-primary">התחל &#10132;</button>
+  </div>
+</div>
+
+<!-- Main App -->
+<div id="app" class="app-container hidden">
+  <!-- Top Nav -->
+  <nav class="top-nav">
+    <div class="nav-content">
+      <div class="nav-right">
+        <span class="nav-title" id="navTitle">תקציב משפחת כהן</span>
+      </div>
+      <div class="nav-center">
+        <button class="month-nav-btn" id="prevMonth">&#9664;</button>
+        <span class="month-display" id="monthDisplay">ינואר 2026</span>
+        <button class="month-nav-btn" id="nextMonth">&#9654;</button>
+      </div>
+      <div class="nav-left">
+        <button class="icon-btn" id="dashboardBtn" title="דף הבית">🏠</button>
+        <button class="icon-btn" id="reportsBtn" title="דוחות">📊</button>
+        <button class="icon-btn" id="insightsBtn" title="תובנות">💡</button>
+        <button class="icon-btn" id="helpBtn" title="הוראות שימוש">❓</button>
+        <button class="icon-btn" id="darkModeToggle" title="מצב כהה">🌙</button>
+        <button class="icon-btn" id="settingsBtn" title="הגדרות">⚙️</button>
+        <button class="icon-btn" id="logoutBtn" title="יציאה">🚪</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content" id="mainContent">
+    <!-- View: Dashboard -->
+    <div id="dashboardView" class="view active">
+      <!-- Hero Summary -->
+      <div class="hero-card">
+        <div class="hero-metric">
+          <div class="hero-metric__label">סה"כ הכנסות</div>
+          <div class="hero-metric__value income-color" id="totalIncome">₪0</div>
+          <div class="hero-metric__change" id="incomeChange"></div>
+        </div>
+        <div class="hero-divider"></div>
+        <div class="hero-metric">
+          <div class="hero-metric__label">סה"כ הוצאות</div>
+          <div class="hero-metric__value expense-color" id="totalExpenses">₪0</div>
+          <div class="hero-metric__change" id="expenseChange"></div>
+        </div>
+        <div class="hero-divider"></div>
+        <div class="hero-metric">
+          <div class="hero-metric__label">יתרה נטו</div>
+          <div class="hero-metric__value" id="netBalance">₪0</div>
+          <div class="hero-metric__change" id="savingsRate"></div>
+        </div>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon">📊</div>
+          <div class="stat-value" id="dailyAvg">₪0</div>
+          <div class="stat-label">הוצאה יומית ממוצעת</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🏆</div>
+          <div class="stat-value" id="topCategory">-</div>
+          <div class="stat-label">קטגוריה מובילה</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🎯</div>
+          <div class="stat-value" id="budgetAdherence">0%</div>
+          <div class="stat-label">עמידה בתקציב</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-value" id="daysLeft">-</div>
+          <div class="stat-label">ימים נותרו בחודש</div>
+          <div class="month-progress-bar"><div id="monthProgressFill"></div></div>
+          <div class="stat-pace" id="spendingPace"></div>
+        </div>
+      </div>
+
+      <!-- Budget Alert Card -->
+      <div class="budget-alert-card" id="budgetAlertCard" style="display:none;">
+        <div class="budget-alert-header">
+          <span>⚠️ התראות תקציב</span>
+          <button class="budget-alert-dismiss" id="dismissBudgetAlert">✕</button>
+        </div>
+        <div id="budgetAlertList"></div>
+      </div>
+
+      <!-- Quick Add -->
+      <div class="quick-add-section">
+        <div class="quick-add-label">⚡ הוספה מהירה</div>
+        <div class="quick-add-btns" id="quickAddBtns"></div>
+      </div>
+
+      <!-- Quick Add Mini Modal -->
+      <div class="quick-modal-overlay" id="quickModalOverlay" style="display:none;">
+        <div class="quick-modal-card">
+          <div class="quick-modal-title" id="quickModalTitle"></div>
+          <div class="currency-input-wrapper">
+            <span class="currency-symbol">₪</span>
+            <input type="number" id="quickAmount" class="form-input form-input--currency" placeholder="0" min="0" step="1">
+          </div>
+          <div class="quick-modal-actions">
+            <button class="btn-primary" id="quickSaveBtn">שמור</button>
+            <button class="btn-secondary" id="quickCancelBtn">ביטול</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Grid -->
+      <div class="cards-grid">
+        <!-- Expense Pie Chart -->
+        <div class="card">
+          <div class="card-header">
+            <h3>💳 פירוט הוצאות</h3>
+          </div>
+          <div class="card-body">
+            <div class="pie-chart-container">
+              <div class="pie-chart" id="pieChart"></div>
+              <div class="pie-center" id="pieCenter">₪0</div>
+            </div>
+            <div class="legend" id="expenseLegend"></div>
+          </div>
+        </div>
+
+        <!-- Income Breakdown -->
+        <div class="card">
+          <div class="card-header">
+            <h3>💰 פירוט הכנסות</h3>
+          </div>
+          <div class="card-body">
+            <div class="bar-chart" id="incomeChart"></div>
+            <div class="chart-total">
+              <span>סה"כ</span>
+              <strong id="incomeTotalChart">₪0</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Budget Progress -->
+        <div class="card">
+          <div class="card-header">
+            <h3>🎯 תקציב חודשי</h3>
+          </div>
+          <div class="card-body" id="budgetBars"></div>
+        </div>
+
+        <!-- Savings Goal -->
+        <div class="card">
+          <div class="card-header">
+            <h3>🏦 יעד חיסכון</h3>
+          </div>
+          <div class="card-body savings-card-body">
+            <svg class="progress-ring" viewBox="0 0 100 100">
+              <circle class="progress-ring__track" cx="50" cy="50" r="40"/>
+              <circle class="progress-ring__fill" id="savingsRing" cx="50" cy="50" r="40"/>
+            </svg>
+            <div class="savings-ring-label" id="savingsRingLabel">0%</div>
+            <div class="savings-details">
+              <div>חיסכון בפועל: <strong id="actualSavings">₪0</strong></div>
+              <div>יעד: <strong id="savingsGoalDisplay">₪0</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trends -->
+      <div class="card card-full">
+        <div class="card-header">
+          <h3>📈 מגמות</h3>
+        </div>
+        <div class="card-body">
+          <canvas id="trendsCanvas" height="250"></canvas>
+        </div>
+      </div>
+
+      <!-- Recent Transactions -->
+      <div class="card card-full">
+        <div class="card-header">
+          <h3>📋 פעולות אחרונות</h3>
+        </div>
+        <div class="card-body">
+          <div id="recentTransactions" class="transactions-list"></div>
+          <div id="emptyState" class="empty-state">
+            <div class="empty-icon">📝</div>
+            <p>אין רשומות עדיין. לחץ על + להוספת הכנסה או הוצאה</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- View: Reports -->
+    <div id="reportsView" class="view">
+      <h2 class="view-title">📊 דוחות והשוואות</h2>
+      <div class="card card-full">
+        <div class="card-header"><h3>השוואה חודשית</h3></div>
+        <div class="card-body">
+          <div class="comparison-table-wrapper">
+            <table class="comparison-table" id="comparisonTable">
+              <thead>
+                <tr>
+                  <th>חודש</th><th>הכנסות</th><th>הוצאות</th><th>יתרה</th><th>חיסכון %</th><th>שינוי</th>
+                </tr>
+              </thead>
+              <tbody id="comparisonBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="card card-full">
+        <div class="card-header"><h3>📈 מגמת הוצאות לפי קטגוריה</h3></div>
+        <div class="card-body">
+          <canvas id="categoryTrendsCanvas" height="300"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- View: Insights BI -->
+    <div id="insightsView" class="view">
+      <h2 class="view-title">💡 תובנות כלכליות</h2>
+      <div id="insightsEmpty" class="empty-state" style="display:none;">
+        <div class="empty-icon">📊</div>
+        <p>אין מספיק נתונים להצגת תובנות. הוסף הכנסות והוצאות כדי לראות ניתוח מעמיק.</p>
+      </div>
+      <div class="cards-grid" id="insightsGrid">
+
+        <!-- 1: Annual Summary -->
+        <div class="card card-full">
+          <div class="card-header"><h3>📅 סיכום שנתי</h3></div>
+          <div class="card-body">
+            <canvas id="annualBarsCanvas" height="280"></canvas>
+            <div class="insight-summary" id="annualSummary"></div>
+          </div>
+        </div>
+
+        <!-- 2: Year Donut -->
+        <div class="card">
+          <div class="card-header"><h3>🍩 התפלגות הוצאות שנתית</h3></div>
+          <div class="card-body">
+            <canvas id="yearDonutCanvas" height="280"></canvas>
+            <div class="legend" id="yearDonutLegend"></div>
+          </div>
+        </div>
+
+        <!-- 3: Top 5 Expenses -->
+        <div class="card">
+          <div class="card-header"><h3>🔥 Top 5 הוצאות החודש</h3></div>
+          <div class="card-body" id="topExpensesContainer"></div>
+        </div>
+
+        <!-- 4: Savings Trend -->
+        <div class="card card-full">
+          <div class="card-header"><h3>💰 מגמת חיסכון</h3></div>
+          <div class="card-body">
+            <canvas id="savingsTrendCanvas" height="260"></canvas>
+          </div>
+        </div>
+
+        <!-- 5: Day of Week -->
+        <div class="card">
+          <div class="card-header"><h3>📆 הוצאות לפי יום בשבוע</h3></div>
+          <div class="card-body">
+            <canvas id="dayOfWeekCanvas" height="250"></canvas>
+          </div>
+        </div>
+
+        <!-- 6: Forecast -->
+        <div class="card">
+          <div class="card-header"><h3>🔮 תחזית לחודש הבא</h3></div>
+          <div class="card-body" id="forecastContainer"></div>
+        </div>
+
+        <!-- 7: Fixed vs Variable -->
+        <div class="card card-full">
+          <div class="card-header"><h3>⚖️ הוצאות קבועות מול משתנות</h3></div>
+          <div class="card-body" id="fixedVsVariableContainer"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- View: Settings -->
+    <div id="settingsView" class="view">
+      <h2 class="view-title">⚙️ הגדרות</h2>
+      <div class="card card-full">
+        <div class="card-header"><h3>פרופיל משפחתי</h3></div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label">שם המשפחה</label>
+            <input type="text" id="settingsFamilyName" class="form-input" maxlength="50">
+          </div>
+          <div class="form-group">
+            <label class="form-label">יעד חיסכון חודשי (₪)</label>
+            <input type="number" id="settingsSavingsGoal" class="form-input" min="0" max="10000000">
+          </div>
+          <button class="btn-primary" id="saveSettingsBtn">שמור הגדרות</button>
+        </div>
+      </div>
+      <div class="card card-full">
+        <div class="card-header"><h3>תקציב מתוכנן לכל קטגוריה</h3></div>
+        <div class="card-body" id="budgetSettings"></div>
+        <div class="card-body">
+          <button class="btn-primary" id="saveBudgetBtn">שמור תקציב</button>
+        </div>
+      </div>
+      <div class="card card-full">
+        <div class="card-header recurring-card-header">
+          <h3>🔄 חשבונות קבועים</h3>
+          <button class="btn-secondary btn-sm" id="addRecurringBtn">+ הוסף</button>
+        </div>
+        <div class="card-body" id="recurringList">
+          <p class="empty-recurring">אין חשבונות קבועים. לחץ "הוסף" להגדרת חשבון חוזר חודשי.</p>
+        </div>
+      </div>
+      <div class="card card-full">
+        <div class="card-header"><h3>נתונים</h3></div>
+        <div class="card-body settings-actions">
+          <button class="btn-secondary" id="exportBtn">📥 ייצוא נתונים (JSON)</button>
+          <label class="btn-secondary import-label">
+            📤 ייבוא נתונים
+            <input type="file" id="importInput" accept=".json" class="hidden">
+          </label>
+          <button class="btn-danger" id="clearDataBtn">🗑️ מחיקת כל הנתונים</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Recurring Modal -->
+  <div class="recurring-modal-overlay" id="recurringModalOverlay">
+    <div class="recurring-modal-card">
+      <div class="recurring-modal-title" id="recurringModalTitle">הוספת חשבון קבוע</div>
+      <div class="form-group">
+        <label class="form-label">שם החשבון</label>
+        <input type="text" id="recName" class="form-input" maxlength="50" placeholder="לדוג׳: ארנונה, חשמל...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">סכום חודשי (₪)</label>
+        <input type="number" id="recAmount" class="form-input" min="1" max="1000000" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">קטגוריה</label>
+        <select id="recCategory" class="form-input form-select"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">יום בחודש (1-28)</label>
+        <input type="number" id="recDay" class="form-input" min="1" max="28" value="1">
+      </div>
+      <div class="recurring-modal-actions">
+        <button class="btn-primary" id="recSaveBtn">שמור</button>
+        <button class="btn-secondary" id="recCancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAB -->
+  <button class="fab" id="fabBtn" title="הוספת רשומה">+</button>
+
+  <!-- Bottom Nav (Mobile) -->
+  <nav class="bottom-nav">
+    <button class="bottom-nav__item bottom-nav__item--active" data-view="dashboardView">
+      <span class="bottom-nav__item-icon">🏠</span>
+      <span>דף הבית</span>
+    </button>
+    <button class="bottom-nav__item bottom-nav__item--add" id="mobileAddBtn">
+      <span class="bottom-nav__item-icon">➕</span>
+      <span>הוספה</span>
+    </button>
+    <button class="bottom-nav__item" data-view="reportsView">
+      <span class="bottom-nav__item-icon">📊</span>
+      <span>דוחות</span>
+    </button>
+    <button class="bottom-nav__item" data-view="insightsView">
+      <span class="bottom-nav__item-icon">💡</span>
+      <span>תובנות</span>
+    </button>
+    <button class="bottom-nav__item" data-view="settingsView">
+      <span class="bottom-nav__item-icon">⚙️</span>
+      <span>הגדרות</span>
+    </button>
+  </nav>
+
+  <!-- Help Modal -->
+  <div class="help-overlay" id="helpOverlay" style="display:none;">
+    <div class="help-modal">
+      <div class="help-modal-header">
+        <h2>❓ הוראות שימוש</h2>
+        <button class="help-close" id="helpClose">✕</button>
+      </div>
+      <div class="help-tabs">
+        <button class="help-tab active" data-tab="basics">📱 בסיסי</button>
+        <button class="help-tab" data-tab="dashboard">🏠 דף הבית</button>
+        <button class="help-tab" data-tab="insights">💡 תובנות</button>
+        <button class="help-tab" data-tab="tips">✨ טיפים</button>
+      </div>
+      <div class="help-content">
+
+        <!-- Tab: Basics -->
+        <div class="help-tab-content active" id="tab-basics">
+          <div class="help-section">
+            <h3>🚀 התחלה מהירה</h3>
+            <p>ברוך הבא לתקציב המשפחתי! האפליקציה עוזרת לעקוב אחר הכנסות והוצאות, לנהל תקציב חודשי, ולקבל תובנות פיננסיות חכמות.</p>
+          </div>
+          <div class="help-section">
+            <h3>➕ הוספת רשומה</h3>
+            <div class="help-steps">
+              <div class="help-step"><span class="step-num">1</span>לחץ על כפתור <strong>+</strong> (הכחול בתחתית המסך)</div>
+              <div class="help-step"><span class="step-num">2</span>בחר <strong>הכנסה</strong> או <strong>הוצאה</strong></div>
+              <div class="help-step"><span class="step-num">3</span>הזן סכום, בחר קטגוריה ותת-קטגוריה</div>
+              <div class="help-step"><span class="step-num">4</span>הוסף תיאור קצר ותאריך ולחץ <strong>שמור</strong></div>
+            </div>
+          </div>
+          <div class="help-section">
+            <h3>⚡ הוספה מהירה</h3>
+            <p>בדף הבית יש שורת כפתורי <strong>הוספה מהירה</strong> לקטגוריות הנפוצות ביותר שלך. לחץ על קטגוריה, הכנס סכום ולחץ שמור - בלי לפתוח את הטופס המלא.</p>
+          </div>
+          <div class="help-section">
+            <h3>📅 ניווט בין חודשים</h3>
+            <p>השתמש בחיצים <strong>◀ ▶</strong> בראש המסך כדי לעבור בין חודשים ולראות נתונים היסטוריים.</p>
+          </div>
+          <div class="help-section">
+            <h3>✏️ עריכה ומחיקה</h3>
+            <p>לחץ על כל רשומה ברשימת הפעולות כדי לערוך או למחוק אותה.</p>
+          </div>
+        </div>
+
+        <!-- Tab: Dashboard -->
+        <div class="help-tab-content" id="tab-dashboard">
+          <div class="help-section">
+            <h3>🃏 כרטיס הגיבור</h3>
+            <p>בראש הדף מוצגות <strong>הכנסות, הוצאות ויתרה</strong> לחודש הנוכחי, כולל השוואה לחודש הקודם (▲/▼ אחוז).</p>
+          </div>
+          <div class="help-section">
+            <h3>📊 שורת סטטיסטיקות</h3>
+            <ul class="help-list">
+              <li><strong>הוצאה יומית ממוצעת</strong> – סך ההוצאות חלקי מספר ימי החודש</li>
+              <li><strong>קטגוריה מובילה</strong> – הקטגוריה עם הכי הרבה הוצאות החודש</li>
+              <li><strong>עמידה בתקציב</strong> – כמה % מהתקציב המתוכנן כבר נוצל</li>
+              <li><strong>ימים נותרו ⏳</strong> – כמה ימים נשארו בחודש + קצב הוצאות (חסכני/מאוזן/מהיר מדי)</li>
+            </ul>
+          </div>
+          <div class="help-section">
+            <h3>⚠️ כרטיס אזהרת תקציב</h3>
+            <p>מופיע אוטומטית כשקטגוריה חצתה <strong>80%</strong> מהתקציב החודשי. הצבעים מסמנים חומרה: 🟡 שים לב → 🔴 קרוב לחריגה → ⛔ חריגה. ניתן לסגור עם ✕.</p>
+          </div>
+          <div class="help-section">
+            <h3>🍕 גרף עוגה</h3>
+            <p>מציג את התפלגות ההוצאות לפי קטגוריה. כל צבע = קטגוריה אחרת.</p>
+          </div>
+          <div class="help-section">
+            <h3>🎯 תקציב חודשי</h3>
+            <p>פסי התקדמות לכל קטגוריה. ירוק = בתקציב, כתום = מתקרב לגבול, אדום = חריגה. ניתן לשנות את התקציב בהגדרות ⚙️.</p>
+          </div>
+          <div class="help-section">
+            <h3>📈 מגמות</h3>
+            <p>גרף קו המציג את ההכנסות (ירוק) וההוצאות (אדום) ב-6 החודשים האחרונים.</p>
+          </div>
+        </div>
+
+        <!-- Tab: Insights -->
+        <div class="help-tab-content" id="tab-insights">
+          <p class="help-intro">דף התובנות 💡 מציג ניתוח BI מעמיק של הנתונים שלך. לחץ על <strong>💡</strong> בסרגל הניווט.</p>
+          <div class="help-section">
+            <h3>📅 סיכום שנתי</h3>
+            <p>גרף עמודות מקובצות המציג הכנסות מול הוצאות לכל 12 חודשי השנה + סיכום כולל.</p>
+          </div>
+          <div class="help-section">
+            <h3>🍩 התפלגות שנתית</h3>
+            <p>Donut chart עם כל ההוצאות השנה מחולקות לקטגוריות עם אחוזים.</p>
+          </div>
+          <div class="help-section">
+            <h3>🔥 Top 5 הוצאות</h3>
+            <p>הקטגוריות עם הכי הרבה הוצאות החודש, עם השוואה לחודש הקודם (▲ עלייה / ▼ ירידה).</p>
+          </div>
+          <div class="help-section">
+            <h3>💰 מגמת חיסכון</h3>
+            <p>גרף קו של היתרה החודשית (הכנסות פחות הוצאות) ל-12 חודשים. הקו הצהוב = ממוצע נע. אזור ירוק = חיסכון, אדום = גירעון.</p>
+          </div>
+          <div class="help-section">
+            <h3>📆 הוצאות לפי יום בשבוע</h3>
+            <p>מראה באיזה ימים בשבוע אתה מוציא הכי הרבה. העמודה האדומה = היום היקר ביותר.</p>
+          </div>
+          <div class="help-section">
+            <h3>🔮 תחזית לחודש הבא</h3>
+            <p>חיזוי הכנסות, הוצאות ויתרה לחודש הבא, מבוסס על ממוצע 3 החודשים האחרונים.</p>
+          </div>
+          <div class="help-section">
+            <h3>⚖️ קבועות מול משתנות</h3>
+            <p><strong>קבועות</strong>: דיור, ביטוחים, מנויים, סלולר, אינטרנט – הוצאות שקשה לשנות.<br><strong>משתנות</strong>: מזון, בילויים, ביגוד ועוד – כאן אפשר לחסוך!</p>
+          </div>
+        </div>
+
+        <!-- Tab: Tips -->
+        <div class="help-tab-content" id="tab-tips">
+          <div class="help-section">
+            <h3>💡 טיפים לשימוש חכם</h3>
+            <div class="help-tip">
+              <span class="tip-icon">🎯</span>
+              <div><strong>הגדר תקציב ריאלי</strong> – לך להגדרות ⚙️ וקבע תקציב לכל קטגוריה. ככה תדע מיד כשאתה חורג.</div>
+            </div>
+            <div class="help-tip">
+              <span class="tip-icon">📱</span>
+              <div><strong>הכנס הוצאות בזמן אמת</strong> – השתמש בהוספה מהירה ⚡ ישר אחרי כל קנייה, כדי לא לשכוח.</div>
+            </div>
+            <div class="help-tip">
+              <span class="tip-icon">📅</span>
+              <div><strong>בדוק כל שבוע</strong> – 5 דקות ביום שישי לבדוק את המצב עוזרות לשמור על המסלול.</div>
+            </div>
+            <div class="help-tip">
+              <span class="tip-icon">💾</span>
+              <div><strong>ייצוא נתונים</strong> – בהגדרות ⚙️ יש אפשרות לייצוא JSON. גבה את הנתונים שלך מדי חודש.</div>
+            </div>
+            <div class="help-tip">
+              <span class="tip-icon">🌙</span>
+              <div><strong>מצב כהה</strong> – לחץ על 🌙 להחלפה בין מצב בהיר לכהה.</div>
+            </div>
+            <div class="help-tip">
+              <span class="tip-icon">🔮</span>
+              <div><strong>תחזית</strong> – אחרי 3 חודשי שימוש, דף התובנות 💡 יציג תחזית מדויקת לחודש הבא.</div>
+            </div>
+          </div>
+          <div class="help-section">
+            <h3>📖 קטגוריות ותת-קטגוריות</h3>
+            <p>כל קטגוריה מחולקת לתת-קטגוריות לפירוט מדויק. לדוגמה: <strong>דיור</strong> כולל שכ"ד, חשמל, מים, גז, ארנונה, ועד בית.</p>
+          </div>
+          <div class="help-section">
+            <h3>🔐 אבטחה</h3>
+            <p>כל הנתונים נשמרים <strong>על המכשיר שלך בלבד</strong> - לא נשלח שום מידע לשרת. הסיסמה מוצפנת ב-SHA-256.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Overlay -->
+  <div class="modal-overlay" id="modalOverlay"></div>
+
+  <!-- Add Entry Panel -->
+  <div class="modal-panel" id="addPanel">
+    <div class="panel-drag-handle"></div>
+    <button class="panel-close" id="panelClose">✕</button>
+    <h2 class="panel-title">הוספת רשומה חדשה</h2>
+
+    <div class="segmented-control">
+      <button class="segmented-control__option segmented-control__option--active-income active" data-type="income" id="segIncome">הכנסה</button>
+      <button class="segmented-control__option" data-type="expense" id="segExpense">הוצאה</button>
+    </div>
+
+    <form id="entryForm">
+      <div class="form-group">
+        <label class="form-label">סכום (₪)</label>
+        <div class="currency-input-wrapper">
+          <span class="currency-symbol">₪</span>
+          <input type="number" id="entryAmount" class="form-input form-input--currency" placeholder="0.00" min="0" max="10000000" step="0.01" required>
+        </div>
+        <div class="form-error" id="amountError"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">קטגוריה</label>
+        <select id="entryCategory" class="form-input" required>
+          <option value="">בחר קטגוריה...</option>
+        </select>
+        <div class="form-error" id="categoryError"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">תיאור</label>
+        <input type="text" id="entryDescription" class="form-input" placeholder="תיאור קצר" maxlength="100">
+        <div class="form-error" id="descError"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">תאריך</label>
+        <input type="date" id="entryDate" class="form-input" required>
+        <div class="form-error" id="dateError"></div>
+      </div>
+
+      <button type="submit" class="btn-primary">✓ שמור</button>
+    </form>
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="modal-panel" id="editPanel">
+    <div class="panel-drag-handle"></div>
+    <button class="panel-close" id="editPanelClose">✕</button>
+    <h2 class="panel-title">עריכת רשומה</h2>
+    <form id="editForm">
+      <input type="hidden" id="editId">
+      <input type="hidden" id="editType">
+      <div class="form-group">
+        <label class="form-label">סכום (₪)</label>
+        <div class="currency-input-wrapper">
+          <span class="currency-symbol">₪</span>
+          <input type="number" id="editAmount" class="form-input form-input--currency" min="0" max="10000000" step="0.01" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">קטגוריה</label>
+        <select id="editCategory" class="form-input" required></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">תיאור</label>
+        <input type="text" id="editDescription" class="form-input" maxlength="100">
+      </div>
+      <div class="form-group">
+        <label class="form-label">תאריך</label>
+        <input type="date" id="editDate" class="form-input" required>
+      </div>
+      <button type="submit" class="btn-primary">✓ עדכן</button>
+      <button type="button" class="btn-danger" id="deleteEntryBtn" style="margin-top:8px">🗑️ מחק רשומה</button>
+    </form>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
