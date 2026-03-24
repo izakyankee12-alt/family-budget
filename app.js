@@ -8,12 +8,6 @@ const MAX_ATTEMPTS = 3;
 const LOCKOUT_DURATION = 60000; // 60 seconds
 const SESSION_TIMEOUT_MS = 12 * 60 * 60 * 1000; // 12 hours
 
-const SECURITY_QUESTIONS = {
-  pet: 'מה שם חיית המחמד הראשונה שלך?',
-  city: 'באיזו עיר נולדת?',
-  school: 'מה שם בית הספר היסודי שלך?',
-  food: 'מה המאכל האהוב עליך?'
-};
 
 // ===== CONSTANTS =====
 const STORAGE_KEY = 'familyBudgetData';
@@ -198,9 +192,7 @@ let appData = null;
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth(); // 0-indexed
 let entryType = 'income';
-let pendingVerificationCode = null;
-let pendingRegistration = null;
-let forgotStep = 'email'; // 'email', 'question', 'reset'
+let forgotStep = 'username'; // 'username', 'reset'
 
 // ===== SECURITY HELPERS =====
 function sanitizeText(input) {
@@ -410,10 +402,10 @@ function isAuthenticated() {
   } catch { return false; }
 }
 
-function createSession(email) {
+function createSession(username) {
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({
     authenticated: true,
-    email,
+    username,
     loginTime: Date.now()
   }));
 }
@@ -454,12 +446,6 @@ function recordFailedAttempt() {
   return lockout;
 }
 
-function generateVerificationCode() {
-  const arr = new Uint32Array(1);
-  crypto.getRandomValues(arr);
-  return (100000 + (arr[0] % 900000)).toString();
-}
-
 function showAuthScreen() {
   document.getElementById('authScreen').classList.remove('hidden');
   document.getElementById('welcomeScreen').classList.add('hidden');
@@ -471,16 +457,10 @@ function hideAuthScreen() {
 }
 
 function showAuthForm(formId) {
-  const forms = ['loginForm', 'registerForm', 'verifyForm', 'forgotForm'];
-  forms.forEach(id => {
+  ['loginForm', 'registerForm', 'forgotForm'].forEach(id => {
     document.getElementById(id).classList.toggle('hidden', id !== formId);
   });
-  const titles = {
-    loginForm: 'כניסה לחשבון',
-    registerForm: 'הרשמה',
-    verifyForm: 'אימות חשבון',
-    forgotForm: 'שחזור סיסמה'
-  };
+  const titles = { loginForm: 'כניסה לחשבון', registerForm: 'הרשמה', forgotForm: 'איפוס סיסמה' };
   document.getElementById('authTitle').textContent = titles[formId] || '';
 }
 
@@ -491,20 +471,16 @@ function logoutUser() {
 }
 
 function setupAuth() {
-  // Navigation between forms
   document.getElementById('showRegister').addEventListener('click', () => showAuthForm('registerForm'));
   document.getElementById('showLogin').addEventListener('click', () => showAuthForm('loginForm'));
   document.getElementById('showForgot').addEventListener('click', () => {
-    forgotStep = 'email';
-    document.getElementById('securityQuestionGroup').classList.add('hidden');
+    forgotStep = 'username';
     document.getElementById('newPasswordGroup').classList.add('hidden');
     document.getElementById('forgotError').textContent = '';
     document.getElementById('forgotBtn').textContent = 'המשך';
     showAuthForm('forgotForm');
   });
   document.getElementById('backToLogin').addEventListener('click', () => showAuthForm('loginForm'));
-
-  // Logout
   document.getElementById('logoutBtn').addEventListener('click', () => {
     if (confirm('האם לצאת מהחשבון?')) logoutUser();
   });
@@ -524,49 +500,35 @@ function setupAuth() {
     }
     lockoutEl.classList.add('hidden');
 
-    const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+    const username = sanitizeText(document.getElementById('loginUsername').value.trim().toLowerCase());
     const password = document.getElementById('loginPassword').value;
     const authData = getAuthData();
 
-    if (!authData || authData.email !== email) {
+    if (!authData || authData.username !== username) {
       const lockout = recordFailedAttempt();
       if (lockout.attempts >= MAX_ATTEMPTS) {
         lockoutEl.classList.remove('hidden');
         lockoutEl.textContent = 'יותר מדי ניסיונות. החשבון נעול ל-60 שניות.';
       } else {
-        errorEl.textContent = 'אימייל או סיסמה שגויים (' + (MAX_ATTEMPTS - lockout.attempts) + ' ניסיונות נותרו)';
+        errorEl.textContent = 'שם משתמש או סיסמה שגויים (' + (MAX_ATTEMPTS - lockout.attempts) + ' ניסיונות נותרו)';
       }
       return;
     }
 
-    let hash;
-    if (authData.version === 2 && authData.salt) {
-      hash = await hashPasswordPBKDF2(password, authData.salt);
-    } else {
-      hash = await hashPasswordLegacy(password);
-    }
+    const hash = await hashPasswordPBKDF2(password, authData.salt);
     if (hash !== authData.passwordHash) {
       const lockout = recordFailedAttempt();
       if (lockout.attempts >= MAX_ATTEMPTS) {
         lockoutEl.classList.remove('hidden');
         lockoutEl.textContent = 'יותר מדי ניסיונות. החשבון נעול ל-60 שניות.';
       } else {
-        errorEl.textContent = 'אימייל או סיסמה שגויים (' + (MAX_ATTEMPTS - lockout.attempts) + ' ניסיונות נותרו)';
+        errorEl.textContent = 'שם משתמש או סיסמה שגויים (' + (MAX_ATTEMPTS - lockout.attempts) + ' ניסיונות נותרו)';
       }
       return;
     }
 
-    // Success — migrate legacy hash to PBKDF2 if needed
-    if (!authData.version || authData.version < 2) {
-      const newSalt = generateSalt();
-      authData.passwordHash = await hashPasswordPBKDF2(password, newSalt);
-      authData.salt = newSalt;
-      authData.version = 2;
-      setAuthData(authData);
-    }
-
     setLockout({ attempts: 0, lockedUntil: 0 });
-    createSession(email);
+    createSession(username);
     hideAuthScreen();
     initApp();
     showToast('ברוך הבא! 🎉');
@@ -578,58 +540,20 @@ function setupAuth() {
     const errorEl = document.getElementById('regError');
     errorEl.textContent = '';
 
-    const email = document.getElementById('regEmail').value.trim().toLowerCase();
+    const username = sanitizeText(document.getElementById('regUsername').value.trim().toLowerCase());
     const password = document.getElementById('regPassword').value;
     const confirm = document.getElementById('regPasswordConfirm').value;
-    const question = document.getElementById('regSecurityQuestion').value;
-    const answer = document.getElementById('regSecurityAnswer').value.trim();
 
+    if (!username) { errorEl.textContent = 'נא להזין שם משתמש'; return; }
     if (password.length < 6) { errorEl.textContent = 'הסיסמה חייבת להכיל לפחות 6 תווים'; return; }
     if (password !== confirm) { errorEl.textContent = 'הסיסמאות אינן תואמות'; return; }
-    if (!question) { errorEl.textContent = 'נא לבחור שאלת אבטחה'; return; }
-    if (!answer) { errorEl.textContent = 'נא להזין תשובה לשאלת האבטחה'; return; }
 
-    const existing = getAuthData();
-    if (existing) { errorEl.textContent = 'כבר קיים חשבון רשום. נא להתחבר.'; return; }
+    if (getAuthData()) { errorEl.textContent = 'כבר קיים חשבון. נא להתחבר.'; return; }
 
     const salt = generateSalt();
-    const answerSalt = generateSalt();
     const passwordHash = await hashPasswordPBKDF2(password, salt);
-    const securityAnswerHash = await hashPasswordPBKDF2(answer.toLowerCase(), answerSalt);
-
-    pendingRegistration = {
-      email,
-      passwordHash,
-      salt,
-      securityQuestion: question,
-      securityAnswerHash,
-      answerSalt,
-      version: 2,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-
-    pendingVerificationCode = generateVerificationCode();
-    document.getElementById('verifyCodeDisplay').textContent = pendingVerificationCode;
-    showAuthForm('verifyForm');
-  });
-
-  // Verify
-  document.getElementById('verifyForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const errorEl = document.getElementById('verifyError');
-    errorEl.textContent = '';
-    const code = document.getElementById('verifyCode').value.trim();
-
-    if (code !== pendingVerificationCode) {
-      errorEl.textContent = 'קוד שגוי. נסה שוב.';
-      return;
-    }
-
-    // Save auth and login
-    setAuthData(pendingRegistration);
-    createSession(pendingRegistration.email);
-    pendingVerificationCode = null;
-    pendingRegistration = null;
+    setAuthData({ username, passwordHash, salt, version: 2, createdAt: new Date().toISOString().split('T')[0] });
+    createSession(username);
     hideAuthScreen();
     initApp();
     showToast('ההרשמה הושלמה! 🎉');
@@ -641,29 +565,11 @@ function setupAuth() {
     const errorEl = document.getElementById('forgotError');
     errorEl.textContent = '';
 
-    if (forgotStep === 'email') {
-      const email = document.getElementById('forgotEmail').value.trim().toLowerCase();
+    if (forgotStep === 'username') {
+      const username = sanitizeText(document.getElementById('forgotUsername').value.trim().toLowerCase());
       const authData = getAuthData();
-      if (!authData || authData.email !== email) {
-        errorEl.textContent = 'אימייל לא נמצא';
-        return;
-      }
-      // Show security question
-      document.getElementById('securityQuestionLabel').textContent = SECURITY_QUESTIONS[authData.securityQuestion] || 'שאלת אבטחה';
-      document.getElementById('securityQuestionGroup').classList.remove('hidden');
-      document.getElementById('forgotBtn').textContent = 'המשך';
-      forgotStep = 'question';
-    } else if (forgotStep === 'question') {
-      const answer = document.getElementById('forgotSecurityAnswer').value.trim();
-      const authData = getAuthData();
-      let answerHash;
-      if (authData.version === 2 && authData.answerSalt) {
-        answerHash = await hashPasswordPBKDF2(answer.toLowerCase(), authData.answerSalt);
-      } else {
-        answerHash = await hashPasswordLegacy(answer.toLowerCase());
-      }
-      if (answerHash !== authData.securityAnswerHash) {
-        errorEl.textContent = 'תשובה שגויה';
+      if (!authData || authData.username !== username) {
+        errorEl.textContent = 'שם משתמש לא נמצא';
         return;
       }
       document.getElementById('newPasswordGroup').classList.remove('hidden');
@@ -678,9 +584,9 @@ function setupAuth() {
       authData.salt = newSalt;
       authData.version = 2;
       setAuthData(authData);
-      showToast('הסיסמה עודכנה בהצלחה! ✓');
+      showToast('הסיסמה עודכנה! ✓');
       showAuthForm('loginForm');
-      forgotStep = 'email';
+      forgotStep = 'username';
     }
   });
 }

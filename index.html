@@ -29,8 +29,8 @@
     <!-- Login Form -->
     <form id="loginForm" class="auth-form">
       <div class="form-group">
-        <label class="form-label">אימייל</label>
-        <input type="email" id="loginEmail" class="form-input" placeholder="your@email.com" required autocomplete="email" dir="ltr">
+        <label class="form-label">שם משתמש</label>
+        <input type="text" id="loginUsername" class="form-input" placeholder="שם משתמש" required autocomplete="username" maxlength="50">
       </div>
       <div class="form-group">
         <label class="form-label">סיסמה</label>
@@ -48,8 +48,8 @@
     <!-- Register Form -->
     <form id="registerForm" class="auth-form hidden">
       <div class="form-group">
-        <label class="form-label">אימייל</label>
-        <input type="email" id="regEmail" class="form-input" placeholder="your@email.com" required autocomplete="email" dir="ltr">
+        <label class="form-label">שם משתמש</label>
+        <input type="text" id="regUsername" class="form-input" placeholder="שם משתמש" required autocomplete="username" maxlength="50">
       </div>
       <div class="form-group">
         <label class="form-label">סיסמה (לפחות 6 תווים)</label>
@@ -59,20 +59,6 @@
         <label class="form-label">אישור סיסמה</label>
         <input type="password" id="regPasswordConfirm" class="form-input" placeholder="סיסמה שוב" required minlength="6" maxlength="64" autocomplete="new-password">
       </div>
-      <div class="form-group">
-        <label class="form-label">שאלת אבטחה</label>
-        <select id="regSecurityQuestion" class="form-input" required>
-          <option value="">בחר שאלה...</option>
-          <option value="pet">מה שם חיית המחמד הראשונה שלך?</option>
-          <option value="city">באיזו עיר נולדת?</option>
-          <option value="school">מה שם בית הספר היסודי שלך?</option>
-          <option value="food">מה המאכל האהוב עליך?</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">תשובה לשאלת האבטחה</label>
-        <input type="text" id="regSecurityAnswer" class="form-input" placeholder="תשובה" required maxlength="100">
-      </div>
       <div class="form-error" id="regError"></div>
       <button type="submit" class="btn-primary">הרשמה</button>
       <div class="auth-links">
@@ -80,27 +66,12 @@
       </div>
     </form>
 
-    <!-- Verify Code Form -->
-    <form id="verifyForm" class="auth-form hidden">
-      <p class="auth-subtitle">קוד אימות נשלח לאימייל שלך (סימולציה)</p>
-      <div class="verify-code-display" id="verifyCodeDisplay"></div>
-      <div class="form-group">
-        <label class="form-label">הזן קוד אימות (6 ספרות)</label>
-        <input type="text" id="verifyCode" class="form-input verify-input" placeholder="000000" required maxlength="6" pattern="[0-9]{6}" inputmode="numeric" dir="ltr">
-      </div>
-      <div class="form-error" id="verifyError"></div>
-      <button type="submit" class="btn-primary">אמת</button>
-    </form>
-
     <!-- Forgot Password Form -->
     <form id="forgotForm" class="auth-form hidden">
+      <p class="auth-subtitle">איפוס סיסמה</p>
       <div class="form-group">
-        <label class="form-label">אימייל</label>
-        <input type="email" id="forgotEmail" class="form-input" placeholder="your@email.com" required dir="ltr">
-      </div>
-      <div class="form-group hidden" id="securityQuestionGroup">
-        <label class="form-label" id="securityQuestionLabel">שאלת אבטחה</label>
-        <input type="text" id="forgotSecurityAnswer" class="form-input" placeholder="תשובה" required maxlength="100">
+        <label class="form-label">שם משתמש</label>
+        <input type="text" id="forgotUsername" class="form-input" placeholder="שם משתמש" required maxlength="50">
       </div>
       <div class="form-group hidden" id="newPasswordGroup">
         <label class="form-label">סיסמה חדשה</label>

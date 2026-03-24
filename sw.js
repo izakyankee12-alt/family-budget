@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'family-budget-v13';
+const CACHE_NAME = 'family-budget-v14';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
